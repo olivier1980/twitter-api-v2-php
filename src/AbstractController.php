@@ -141,6 +141,14 @@ abstract class AbstractController
 
             return $body;
         } catch (ClientException | ServerException $e) {
+            if ($e instanceof ClientException && $e->getResponse()->getStatusCode() === 429) {
+                $resetTimestamp = $e->getResponse()->getHeader('x-rate-limit-reset');
+                throw new TooManyRequestException(json_encode([
+                    'error' => 'Too many requests',
+                    'timestamp' => $resetTimestamp
+                ]));
+            }
+
             throw new Exception(json_encode($e->getResponse()->getBody()->getContents(), JSON_THROW_ON_ERROR));
         }
     }
