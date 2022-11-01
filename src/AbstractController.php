@@ -8,41 +8,42 @@ use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Subscriber\Oauth\Oauth1;
 use GuzzleHttp\HandlerStack;
+use Noweh\TwitterApi\Exception\TooManyRequestException;
 
 abstract class AbstractController
 {
     /** @const string API_URL */
-    private const API_BASE_URI = 'https://api.twitter.com/2/';
+    protected const API_BASE_URI = 'https://api.twitter.com/2/';
 
     /**
      * @var string
      */
-    private string $access_token;
+    protected string $access_token;
 
     /**
      * @var string
      */
-    private string $access_token_secret;
+    protected string $access_token_secret;
 
     /**
      * @var string
      */
-    private string $consumer_key;
+    protected string $consumer_key;
 
     /**
      * @var string
      */
-    private string $consumer_secret;
+    protected string $consumer_secret;
 
     /**
      * @var string
      */
-    private string $bearer_token;
+    protected string $bearer_token;
 
     /**
      * @var string $endpoint
      */
-    private string $endpoint;
+    protected string $endpoint;
 
     /**
      * Creates object. Requires an array of settings.
