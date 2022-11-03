@@ -5,72 +5,60 @@ namespace Noweh\TwitterApi;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Subscriber\Oauth\Oauth1;
 use GuzzleHttp\HandlerStack;
+use JsonException;
 use Noweh\TwitterApi\Exception\TooManyRequestException;
+use stdClass;
 
-abstract class AbstractController
+class TwitterClient
 {
-    /** @const string API_URL */
     protected const API_BASE_URI = 'https://api.twitter.com/2/';
-
-    /**
-     * @var string
-     */
-    protected string $access_token;
-
-    /**
-     * @var string
-     */
-    protected string $access_token_secret;
-
-    /**
-     * @var string
-     */
-    protected string $consumer_key;
-
-    /**
-     * @var string
-     */
-    protected string $consumer_secret;
-
-    /**
-     * @var string
-     */
     protected string $bearer_token;
-
-    /**
-     * @var string $endpoint
-     */
     protected string $endpoint;
 
-    /**
-     * Creates object. Requires an array of settings.
-     * @param array<string> $settings
-     * @throws Exception when CURL extension is not loaded
-     */
-    public function __construct(array $settings = [])
+    public function __construct(        protected readonly string $consumerKey,
+                                        protected readonly string $consumerSecret,
+                                        protected readonly string $accessToken,
+                                        protected readonly string $accessTokenSecret)
     {
-        if (!extension_loaded('curl')) {
-            throw new Exception('PHP extension CURL is not loaded.');
+    }
+
+    public function setBearerToken(string $token): void
+    {
+        $this->bearer_token = $token;
+    }
+
+    public function getMe()
+    {
+        $this->endpoint = 'users/me';
+        return $this->performRequest();
+    }
+
+    public function deleteLike(int $userId, int $tweetId)
+    {
+        $this->endpoint = 'users/'.$userId.'/likes/'. $tweetId;
+        return $this->performRequest('DELETE');
+    }
+
+    function getLikedTweets(int $userId, ?string $nextToken = null)
+    {
+        $this->endpoint = 'users/'.$userId.'/liked_tweets?tweet.fields=author_id';
+
+        if ($nextToken) {
+            $this->endpoint .= '&pagination_token='. $nextToken;
         }
 
-        if (!isset(
-            $settings['access_token'],
-            $settings['access_token_secret'],
-            $settings['consumer_key'],
-            $settings['consumer_secret'],
-            $settings['bearer_token']
-        )) {
-            throw new Exception('Incomplete settings passed.');
-        }
+        return $this->performRequest();
+    }
 
-        $this->access_token = $settings['access_token'];
-        $this->access_token_secret = $settings['access_token_secret'];
-        $this->consumer_key = $settings['consumer_key'];
-        $this->consumer_secret = $settings['consumer_secret'];
-        $this->bearer_token = $settings['bearer_token'];
+    public function getExpandedTweet(array $ids)
+    {
+        $this->endpoint = 'tweets?ids='. join(',',$ids) .'&expansions=referenced_tweets.id,author_id,attachments.media_keys&tweet.fields=created_at&user.fields=id,name,username,profile_image_url&media.fields=url,type,width,height,preview_image_url,variants';
+
+        return $this->performRequest();
     }
 
     /**
@@ -78,9 +66,10 @@ abstract class AbstractController
      * @param string $method
      * @param array<string, mixed> $postData
      * @return mixed
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \JsonException
+     * @throws GuzzleException
+     * @throws JsonException
      * @throws Exception
+     * @throws TooManyRequestException
      */
     public function performRequest(string $method = 'GET', array $postData = []): mixed
     {
@@ -105,10 +94,10 @@ abstract class AbstractController
                 // Inject Oauth handler
                 $stack = HandlerStack::create();
                 $middleware = new Oauth1([
-                    'consumer_key' => $this->consumer_key,
-                    'consumer_secret' => $this->consumer_secret,
-                    'token' => $this->access_token,
-                    'token_secret' => $this->access_token_secret,
+                    'consumer_key' => $this->consumerKey,
+                    'consumer_secret' => $this->consumerSecret,
+                    'token' => $this->accessToken,
+                    'token_secret' => $this->accessTokenSecret,
                 ]);
                 $stack->push($middleware);
 
@@ -119,16 +108,16 @@ abstract class AbstractController
                 ]);
             }
 
-            $response  = $client->request($method, $this->constructEndpoint(), [
+            $response  = $client->request($method, $this->endpoint, [
                 'headers' => $headers,
                         // this is always array from function spec,use count to see if data set. Otherwise twitter error on empty data.
                 'json'    => count($postData) ? $postData: null,
             ]);
 
-            $body = json_decode($response->getBody()->getContents(), false, 512, JSON_THROW_ON_ERROR);
+            $body = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
 
             if ($response->getStatusCode() >= 400) {
-                $error = new \stdClass();
+                $error = new stdClass();
                 $error->message = 'cURL error';
                 if ($body) {
                     $error->details = $response;
@@ -142,10 +131,12 @@ abstract class AbstractController
             return $body;
         } catch (ClientException | ServerException $e) {
             if ($e instanceof ClientException && $e->getResponse()->getStatusCode() === 429) {
-                $resetTimestamp = $e->getResponse()->getHeader('x-rate-limit-reset');
+                $resetTimestamp = $e->getResponse()->getHeader('x-rate-limit-reset')[0];
+
                 throw new TooManyRequestException(json_encode([
                     'error' => 'Too many requests',
-                    'timestamp' => $resetTimestamp
+                    'timestamp' => $resetTimestamp,
+                    'uri' => $this->endpoint
                 ]));
             }
 
@@ -153,22 +144,4 @@ abstract class AbstractController
         }
     }
 
-    /**
-     * Set Endpoint value
-     * @param string $endpoint
-     * @return void
-     */
-    protected function setEndpoint(string $endpoint): void
-    {
-        $this->endpoint = $endpoint;
-    }
-
-    /**
-     * Retrieve Endpoint value
-     * @return string
-     */
-    protected function constructEndpoint(): string
-    {
-        return $this->endpoint;
-    }
 }

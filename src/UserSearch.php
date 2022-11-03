@@ -4,7 +4,7 @@ namespace Noweh\TwitterApi;
 
 use Noweh\TwitterApi\Enum\Modes;
 
-class UserSearch extends AbstractController
+class UserSearch extends TwitterClient
 {
     /** @var mixed $idOrUsername */
     private mixed $idOrUsername;

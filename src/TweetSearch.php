@@ -5,7 +5,7 @@ namespace Noweh\TwitterApi;
 use Noweh\TwitterApi\Enum\Operators;
 use Noweh\TwitterApi\Model\Tweet;
 
-class TweetSearch extends AbstractController
+class TweetSearch extends TwitterClient
 {
     /** @var array<string> $filteredUsernamesFrom */
     private array $filteredUsernamesFrom = [];
