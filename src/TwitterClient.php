@@ -78,7 +78,7 @@ class TwitterClient
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ];
-            if ($method === 'GET') {
+            if ($method === 'GET' || $method === 'DELETE') {
                 // Inject the Bearer token into the header for the call
                 $client = new Client(['base_uri' => self::API_BASE_URI]);
 
