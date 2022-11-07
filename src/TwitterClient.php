@@ -37,6 +37,12 @@ class TwitterClient
         return $this->performRequest();
     }
 
+    public function addLike(int $userId, int $tweetId)
+    {
+        $this->endpoint = 'users/'.$userId.'/likes/'. $tweetId;
+        return $this->performRequest('POST');
+    }
+
     public function deleteLike(int $userId, int $tweetId)
     {
         $this->endpoint = 'users/'.$userId.'/likes/'. $tweetId;
