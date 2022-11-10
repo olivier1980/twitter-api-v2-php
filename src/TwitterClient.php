@@ -62,7 +62,10 @@ class TwitterClient
 
     public function getExpandedTweet(array $ids)
     {
-        $this->endpoint = 'tweets?ids='. join(',',$ids) .'&expansions=referenced_tweets.id,author_id,attachments.media_keys&tweet.fields=created_at&user.fields=id,name,username,profile_image_url&media.fields=url,type,width,height,preview_image_url,variants';
+        $this->endpoint = 'tweets?ids='. join(',',$ids) .'&expansions=referenced_tweets.id,author_id,attachments.media_keys&'.
+            "tweet.fields=created_at,entities&".
+            "user.fields=id,name,username,profile_image_url&".
+            'media.fields=url,type,width,height,preview_image_url,variants';
 
         return $this->performRequest();
     }
