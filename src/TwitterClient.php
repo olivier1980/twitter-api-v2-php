@@ -49,6 +49,13 @@ class TwitterClient
         return $this->performRequest('DELETE');
     }
 
+    function getFollows(int $userId)
+    {
+        $this->endpoint = 'users/'.$userId.'/following';
+        return $this->performRequest();
+    }
+
+
     function getLikedTweets(int $userId, ?string $nextToken = null)
     {
         $this->endpoint = 'users/'.$userId.'/liked_tweets?tweet.fields=author_id';
