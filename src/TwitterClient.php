@@ -49,9 +49,14 @@ class TwitterClient
         return $this->performRequest('DELETE');
     }
 
-    function getFollows(int $userId)
+    function getFollows(int $userId, ?string $nextToken = null)
     {
-        $this->endpoint = 'users/'.$userId.'/following';
+        $this->endpoint = 'users/'.$userId.'/following/?user.fields=description,name,pinned_tweet_id,id,profile_image_url';
+
+        if ($nextToken) {
+            $this->endpoint .= '&pagination_token='. $nextToken;
+        }
+
         return $this->performRequest();
     }
 
